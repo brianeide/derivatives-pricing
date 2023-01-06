@@ -1,2 +1,2 @@
 # derivatives-pricing
-Various derivatives pricing calculations
+OCaml and Python code for derivatives pricing calculations

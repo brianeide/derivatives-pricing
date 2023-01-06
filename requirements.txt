@@ -1,0 +1,6 @@
+jupyter
+jupyter-client
+jupyter-console
+jupyter-core
+pandas
+scipy

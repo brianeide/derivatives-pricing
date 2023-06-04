@@ -1,26 +1,46 @@
 open Printf;;
 
-let binomial vol s k r t steps = (* vol, current spot, strike, risk-free rate, expiration, steps *)
+let european vol s k r div t steps call = (* vol, current spot, strike, risk-free rate, expiration, steps *)
   let h = t /. steps
-  in let u = exp (vol *. (sqrt h))
-  in let d = exp (~-.vol *. (sqrt h))
-  in let p = ((exp (r *. h)) -. d) /. (u -. d) (* risk-neutral probability *)
+  in let u = exp ((r -. div) *. h +. vol *. (sqrt h))
+  in let d = exp ((r -. div) *. h -. vol *. (sqrt h))
+  in let p = ((exp ((r -. div) *. h)) -. d) /. (u -. d) (* risk-neutral probability *)
   in let q = 1.0 -. p
   in let rec node s n = (* node spot price, step *)
     if n = steps
-      then max 0.0 (s -. k)
+      then max 0.0 (if call then s -. k else k -. s)
     else
       let up = node (s *. u) (n +. 1.0)
       in let down = node (s *. d) (n +. 1.0)
       in (exp (~-.r *. h)) *. (p *. up +. q *. down)
-  in 
-  printf "h = %f\n" h;
-  printf "u = %f\n" u;
-  printf "d = %f\n" d;
-  printf "p = %f\n" p;
-  printf "q = %f\n" q;
-  node s 0.0
+  in node s 0.0
 ;;
 
-let call = binomial 0.354686 129.93 120.0 0.05 1.0 20.0
-  in printf "Call Price = %f\n" call ;; (* 26.3825593697785656; pretty good *)
+let american vol s k r div t steps call =
+  let h = t /. steps
+  in let u = exp ((r -. div) *. h +. vol *. (sqrt h))
+  in let d = exp ((r -. div) *. h -. vol *. (sqrt h))
+  in let p = ((exp ((r -. div) *. h)) -. d) /. (u -. d)
+  in let q = 1.0 -. p
+  in let rec node s n =
+    let exercised = max 0.0 (if call then s -. k else k -. s)
+    in if n = steps
+        then exercised
+      else
+        let up = max exercised (node (s *. u) (n +. 1.0))
+        in let down = max exercised (node (s *. d) (n +. 1.0))
+        in (exp (~-.r *. h)) *. (p *. up +. q *. down)
+  in node s 0.0
+;;
+
+let euroCall = european 0.2979 181.11 180.0 0.05 0.0051 0.013699 24.0 true
+  in printf "European Call Price = %f\n" euroCall ;; (* 3.193079 *)
+
+let americanCall = american 0.2979 181.11 180.0 0.05 0.0051 0.013699 24.0 true
+  in printf "American Call Price = %f\n" americanCall ;; (* 3.842689 *)
+
+let euroPut = european 0.2979 181.11 180.0 0.05 0.0051 0.013699 24.0 false
+  in printf "European Put Price = %f\n" euroPut ;; (* 1.972483 *)
+  
+let americanPut = american 0.2979 181.11 180.0 0.05 0.0051 0.013699 24.0 false
+  in printf "American Put Price = %f\n" americanPut ;; (* 2.427060 *)
